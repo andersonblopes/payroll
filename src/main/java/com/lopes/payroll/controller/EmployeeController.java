@@ -6,6 +6,8 @@ import com.lopes.payroll.model.Employee;
 import com.lopes.payroll.model.repository.EmployeeRepository;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.IanaLinkRelations;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,13 +31,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RequestMapping("employees")
 public class EmployeeController {
 
-    /**
-     * The Employee repository.
-     */
     private final EmployeeRepository employeeRepository;
-    /**
-     * The Employee resource assembler.
-     */
     private final EmployeeResourceAssembler employeeResourceAssembler;
 
     /**
@@ -48,7 +45,6 @@ public class EmployeeController {
         this.employeeResourceAssembler = employeeResourceAssembler;
     }
 
-
     /**
      * All collection model.
      *
@@ -57,13 +53,6 @@ public class EmployeeController {
     @GetMapping
     public CollectionModel<EntityModel<Employee>> all() {
 
-       /*
-            List<EntityModel<Employee>> employees = employeeRepository.findAll().stream().map(employee -> new EntityModel<>(employee,
-                    linkTo(methodOn(EmployeeController.class).findById(employee.getId())).withSelfRel(),
-                    linkTo(methodOn(EmployeeController.class).all()).withRel("employees"))).collect(Collectors.toList());
-            return new CollectionModel<>(employees, linkTo(methodOn(EmployeeController.class).all()).withSelfRel());
-        */
-        
         List<EntityModel<Employee>> employees = employeeRepository.findAll().stream()
                 .map(employeeResourceAssembler::toModel)
                 .collect(Collectors.toList());
@@ -73,14 +62,17 @@ public class EmployeeController {
     }
 
     /**
-     * New employee employee.
+     * New employee response entity.
      *
      * @param employee the employee
-     * @return the employee
+     * @return the response entity
+     * @throws URISyntaxException the uri syntax exception
      */
     @PostMapping
-    public Employee newEmployee(@RequestBody Employee employee) {
-        return employeeRepository.save(employee);
+    public ResponseEntity<?> newEmployee(@RequestBody Employee employee) throws URISyntaxException {
+        EntityModel<Employee> entityModel = employeeResourceAssembler.toModel(employeeRepository.save(employee));
+
+        return ResponseEntity.created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri()).body(entityModel);
     }
 
     /**
@@ -95,41 +87,49 @@ public class EmployeeController {
                 .orElseThrow(() -> new EmployeeNotFoundException(id));
 
         return employeeResourceAssembler.toModel(employee);
-       /*
-            return new EntityModel<>(employee,
-                    linkTo(methodOn(EmployeeController.class).findById(id)).withSelfRel(),
-                    linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
-        */
+
     }
 
-
     /**
-     * Update employee employee.
+     * Update employee response entity.
      *
      * @param newEmployee the new employee
      * @param id          the id
-     * @return the employee
+     * @return the response entity
+     * @throws URISyntaxException the uri syntax exception
      */
     @PutMapping("/{id}")
-    public Employee updateEmployee(@RequestBody Employee newEmployee, @PathVariable Long id) {
-        return employeeRepository.findById(id).map(employee -> {
-            employee.setName(newEmployee.getName());
-            employee.setRole(newEmployee.getRole());
-            return employeeRepository.save(employee);
-        }).orElseGet(() -> {
-            newEmployee.setId(id);
-            return employeeRepository.save(newEmployee);
-        });
+    ResponseEntity<?> updateEmployee(@RequestBody Employee newEmployee, @PathVariable Long id) throws URISyntaxException {
+
+        Employee updatedEmployee = employeeRepository.findById(id)
+                .map(employee -> {
+                    employee.setName(newEmployee.getName());
+                    employee.setRole(newEmployee.getRole());
+                    return employeeRepository.save(employee);
+                })
+                .orElseGet(() -> {
+                    newEmployee.setId(id);
+                    return employeeRepository.save(newEmployee);
+                });
+
+        EntityModel<Employee> entityModel = employeeResourceAssembler.toModel(updatedEmployee);
+
+        return ResponseEntity
+                .created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri())
+                .body(entityModel);
     }
 
     /**
-     * Delete employee.
+     * Delete employee response entity.
      *
      * @param id the id
+     * @return the response entity
      */
     @DeleteMapping("/{id}")
-    public void deleteEmployee(@PathVariable Long id) {
+    public ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
         employeeRepository.deleteById(id);
+
+        return ResponseEntity.noContent().build();
     }
 
 }

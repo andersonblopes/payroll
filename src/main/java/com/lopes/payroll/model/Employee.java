@@ -20,9 +20,13 @@ public class Employee {
     @GeneratedValue
     private Long id;
     /**
-     * The Name.
+     * The First name.
      */
-    private String name;
+    private String firstName;
+    /**
+     * The Last name.
+     */
+    private String lastName;
     /**
      * The Role.
      */
@@ -37,12 +41,34 @@ public class Employee {
     /**
      * Instantiates a new Employee.
      *
-     * @param name the name
-     * @param role the role
+     * @param firstName the first name
+     * @param lastName  the last name
+     * @param role      the role
      */
-    public Employee(String name, String role) {
-        this.name = name;
+    public Employee(String firstName, String lastName, String role) {
+        this.firstName = firstName;
+        this.lastName = lastName;
         this.role = role;
+    }
+
+    /**
+     * Gets name.
+     *
+     * @return the name
+     */
+    public String getName() {
+        return this.firstName + " " + this.lastName;
+    }
+
+    /**
+     * Sets name.
+     *
+     * @param name the name
+     */
+    public void setName(String name) {
+        String[] parts = name.split(" ");
+        this.firstName = parts[0];
+        this.lastName = parts[1];
     }
 
 }
