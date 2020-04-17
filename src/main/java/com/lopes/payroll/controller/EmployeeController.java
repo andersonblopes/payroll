@@ -3,6 +3,7 @@ package com.lopes.payroll.controller;
 import com.lopes.payroll.errors.EmployeeNotFoundException;
 import com.lopes.payroll.model.Employee;
 import com.lopes.payroll.model.repository.EmployeeRepository;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -45,8 +47,11 @@ public class EmployeeController {
      * @return the list
      */
     @GetMapping
-    List<Employee> all() {
-        return employeeRepository.findAll();
+    CollectionModel<EntityModel<Employee>> all() {
+        List<EntityModel<Employee>> employees = employeeRepository.findAll().stream().map(employee -> new EntityModel<>(employee,
+                linkTo(methodOn(EmployeeController.class).findById(employee.getId())).withSelfRel(),
+                linkTo(methodOn(EmployeeController.class).all()).withRel("employees"))).collect(Collectors.toList());
+        return new CollectionModel<>(employees, linkTo(methodOn(EmployeeController.class).all()).withSelfRel());
     }
 
     /**
