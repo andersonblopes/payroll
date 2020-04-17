@@ -1,5 +1,6 @@
 package com.lopes.payroll.controller;
 
+import com.lopes.payroll.assembler.EmployeeResourceAssembler;
 import com.lopes.payroll.errors.EmployeeNotFoundException;
 import com.lopes.payroll.model.Employee;
 import com.lopes.payroll.model.repository.EmployeeRepository;
@@ -31,27 +32,44 @@ public class EmployeeController {
      * The Employee repository.
      */
     private final EmployeeRepository employeeRepository;
+    /**
+     * The Employee resource assembler.
+     */
+    private final EmployeeResourceAssembler employeeResourceAssembler;
 
     /**
      * Instantiates a new Employee controller.
      *
-     * @param employeeRepository the employee repository
+     * @param employeeRepository        the employee repository
+     * @param employeeResourceAssembler the employee resource assembler
      */
-    public EmployeeController(EmployeeRepository employeeRepository) {
+    public EmployeeController(EmployeeRepository employeeRepository, EmployeeResourceAssembler employeeResourceAssembler) {
         this.employeeRepository = employeeRepository;
+        this.employeeResourceAssembler = employeeResourceAssembler;
     }
 
+
     /**
-     * All list.
+     * All collection model.
      *
-     * @return the list
+     * @return the collection model
      */
     @GetMapping
-    CollectionModel<EntityModel<Employee>> all() {
-        List<EntityModel<Employee>> employees = employeeRepository.findAll().stream().map(employee -> new EntityModel<>(employee,
-                linkTo(methodOn(EmployeeController.class).findById(employee.getId())).withSelfRel(),
-                linkTo(methodOn(EmployeeController.class).all()).withRel("employees"))).collect(Collectors.toList());
-        return new CollectionModel<>(employees, linkTo(methodOn(EmployeeController.class).all()).withSelfRel());
+    public CollectionModel<EntityModel<Employee>> all() {
+
+       /*
+            List<EntityModel<Employee>> employees = employeeRepository.findAll().stream().map(employee -> new EntityModel<>(employee,
+                    linkTo(methodOn(EmployeeController.class).findById(employee.getId())).withSelfRel(),
+                    linkTo(methodOn(EmployeeController.class).all()).withRel("employees"))).collect(Collectors.toList());
+            return new CollectionModel<>(employees, linkTo(methodOn(EmployeeController.class).all()).withSelfRel());
+        */
+        
+        List<EntityModel<Employee>> employees = employeeRepository.findAll().stream()
+                .map(employeeResourceAssembler::toModel)
+                .collect(Collectors.toList());
+
+        return new CollectionModel<>(employees,
+                linkTo(methodOn(EmployeeController.class).all()).withSelfRel());
     }
 
     /**
@@ -61,24 +79,29 @@ public class EmployeeController {
      * @return the employee
      */
     @PostMapping
-    Employee newEmployee(@RequestBody Employee employee) {
+    public Employee newEmployee(@RequestBody Employee employee) {
         return employeeRepository.save(employee);
     }
 
     /**
-     * Find by id employee.
+     * Find by id entity model.
      *
      * @param id the id
-     * @return the employee
+     * @return the entity model
      */
     @GetMapping("/{id}")
-    EntityModel<Employee> findById(@PathVariable Long id) {
+    public EntityModel<Employee> findById(@PathVariable Long id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new EmployeeNotFoundException(id));
-        return new EntityModel<>(employee,
-                linkTo(methodOn(EmployeeController.class).findById(id)).withSelfRel(),
-                linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
+
+        return employeeResourceAssembler.toModel(employee);
+       /*
+            return new EntityModel<>(employee,
+                    linkTo(methodOn(EmployeeController.class).findById(id)).withSelfRel(),
+                    linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
+        */
     }
+
 
     /**
      * Update employee employee.
@@ -88,7 +111,7 @@ public class EmployeeController {
      * @return the employee
      */
     @PutMapping("/{id}")
-    Employee updateEmployee(@RequestBody Employee newEmployee, @PathVariable Long id) {
+    public Employee updateEmployee(@RequestBody Employee newEmployee, @PathVariable Long id) {
         return employeeRepository.findById(id).map(employee -> {
             employee.setName(newEmployee.getName());
             employee.setRole(newEmployee.getRole());
@@ -99,14 +122,13 @@ public class EmployeeController {
         });
     }
 
-
     /**
      * Delete employee.
      *
      * @param id the id
      */
     @DeleteMapping("/{id}")
-    void deleteEmployee(@PathVariable Long id) {
+    public void deleteEmployee(@PathVariable Long id) {
         employeeRepository.deleteById(id);
     }
 
