@@ -48,7 +48,7 @@ public class EmployeeController {
     Employee newEmployee(@RequestBody Employee employee) {
         return employeeRepository.save(employee);
     }
-    
+
     /**
      * Find by id employee.
      *
@@ -79,12 +79,13 @@ public class EmployeeController {
         });
     }
 
+
     /**
      * Delete employee.
      *
      * @param id the id
      */
-    @DeleteMapping("/{/id}")
+    @DeleteMapping("/{id}")
     void deleteEmployee(@PathVariable Long id) {
         employeeRepository.deleteById(id);
     }
